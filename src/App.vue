@@ -1,4 +1,12 @@
+<template>
+  <div>
+    <AuthorView/>
+    <router-view />
+  </div>
+</template>
+
 <script setup>
-import {ref} from "vue";
-import axios from "axios";
+import AuthorView from './views/AuthorView.vue';
+
+
 </script>
