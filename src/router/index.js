@@ -1,7 +1,10 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import AuthorView from "@/views/AuthorView.vue"
-import Dashboard from '@/views/Dashboard.vue'
-// import Authors from '@/components/Authors.vue'
+import { createRouter, createWebHistory } from "vue-router";
+import AuthorView from "@/views/AuthorView.vue";
+import CategoryView from "@/views/CategoryView.vue";
+import BookView from "@/views/BookView.vue";
+import MemberView from "@/views/MemberView.vue";
+import BorrowingView from "@/views/BorrowingView.vue";
+import Dashboard from "@/views/Dashboard.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,16 +20,27 @@ const router = createRouter({
       name: 'authors',
       component: AuthorView,
     },
-    
-    // {
-    //   path: '/about',
-    //   name: 'about',
-    //   // route level code-splitting
-    //   // this generates a separate chunk (About.[hash].js) for this route
-    //   // which is lazy-loaded when the route is visited.
-    //   component: () => import('../views/AboutView.vue'),
-    // },
+    {
+      path: "/category",
+      name: "category",
+      component: CategoryView,
+    },
+    {
+      path: "/books",
+      name: "books",
+      component: BookView,
+    },
+    {
+      path: "/members",
+      name: "members",
+      component: MemberView,
+    },
+    {
+      path: "/borrowing",
+      name: "borrowing",
+      component: BorrowingView,
+    },
   ],
-})
+});
 
-export default router
+export default router;
