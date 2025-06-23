@@ -1,15 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AuthorView from "@/views/AuthorView.vue"
+import Dashboard from '@/views/Dashboard.vue'
 // import Authors from '@/components/Authors.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+   
     {
       path: '/',
+      name: 'dashboard',
+      component: Dashboard,
+    },
+     {
+      path: '/authors',
       name: 'authors',
       component: AuthorView,
     },
+    
     // {
     //   path: '/about',
     //   name: 'about',
