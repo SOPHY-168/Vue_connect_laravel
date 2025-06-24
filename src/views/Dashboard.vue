@@ -23,6 +23,7 @@
 </template>
 
 <script setup>
+
 const dashboardItems = [
   { label: 'Books', count: 120, icon: '📘', bg: 'bg-red-400' },
   { label: 'Members', count: 80, icon: '👥', bg: 'bg-green-500' },

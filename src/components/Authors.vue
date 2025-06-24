@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 
 const authors = ref([]);
-
+const error = ref(null);
 // States for create and edit modals
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
@@ -16,13 +16,16 @@ const newAuthor = ref({
 const editingAuthor = ref(null);
 
 import { onMounted } from 'vue';
-import api from '@/plugins/axios';
+import { index } from '@/api/author';
+
 onMounted(async () => {
   try {
-    const response = await api.get('/authors');
+    const response = await index();
     authors.value = Array.isArray(response.data) ? response.data : response.data.data;
-  } catch (error) {
-    console.error('Failed to fetch authors:', error);
+    console.log(authors.value);
+  } catch (err) {
+    error.value = "Failed to fetch posts";
+    console.error(err);
   }
 });
 
