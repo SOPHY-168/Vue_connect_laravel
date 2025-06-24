@@ -1,67 +1,78 @@
+```vue
 <script setup>
-import { ref, onMounted } from 'vue'
-import api from '@/plugins/axios'
+import { ref, onMounted, watch } from 'vue';
+import api from '@/plugins/axios';
 
-const members = ref([])
-
-const showCreateModal = ref(false)
-const showEditModal = ref(false)
+const members = ref([]);
+const showCreateModal = ref(false);
+const showEditModal = ref(false);
 
 const newMember = ref({
   name: '',
   age: '',
   email: '',
-  address: ''
-})
+  address: '',
+});
 
-const editingMember = ref(null)
+const editingMember = ref(null);
 
+// Load members from localStorage or API on mount
 onMounted(async () => {
   try {
-    const response = await api.get('/members')
-    members.value = Array.isArray(response.data) ? response.data : response.data.data
+    const response = await api.get('/members');
+    members.value = Array.isArray(response.data) ? response.data : response.data.data;
   } catch (error) {
-    console.error('Failed to fetch members:', error)
+    console.error('Failed to fetch members:', error);
   }
-})
+});
 
-function openCreateModal() {
-  newMember.value = { name: '', age: '', email: '', address: '' }
-  showCreateModal.value = true
-}
-
-function createMember() {
+async function createMember() {
   if (!newMember.value.name || !newMember.value.email) {
-    alert('Name and Email are required.')
-    return
+    alert('Name and Email are required.');
+    return;
   }
 
-  members.value.push({
-    id: Date.now(),
-    ...newMember.value
-  })
-
-  showCreateModal.value = false
-}
-
-function editMember(member) {
-  editingMember.value = { ...member }
-  showEditModal.value = true
-}
-
-function saveEdit() {
-  const index = members.value.findIndex(m => m.id === editingMember.value.id)
-  if (index !== -1) {
-    members.value[index] = { ...editingMember.value }
-  }
-  showEditModal.value = false
-}
-
-function deleteMember(memberId) {
-  if (confirm('Are you sure you want to delete this member?')) {
-    members.value = members.value.filter(m => m.id !== memberId)
+  try {
+    const response = await api.post('/members', newMember.value);
+    members.value.push(response.data);
+    showCreateModal.value = false;
+  } catch (error) {
+    console.error('Failed to create member:', error);
+    alert('Error creating member.');
   }
 }
+
+async function saveEdit() {
+  if (!editingMember.value.name || !editingMember.value.email) {
+    alert('Name and Email are required.');
+    return;
+  }
+
+  try {
+    const response = await api.put(`/members/${editingMember.value.id}`, editingMember.value);
+    const index = members.value.findIndex((m) => m.id === editingMember.value.id);
+    if (index !== -1) {
+      members.value[index] = response.data;
+    }
+    showEditModal.value = false;
+  } catch (error) {
+    console.error('Failed to update member:', error);
+    alert('Error updating member.');
+  }
+}
+
+async function deleteMember(memberId) {
+  if (!confirm('Are you sure you want to delete this member?')) return;
+
+  try {
+    await api.delete(`/members/${memberId}`);
+    members.value = members.value.filter((m) => m.id !== memberId);
+  } catch (error) {
+    console.error('Failed to delete member:', error);
+    alert('Error deleting member.');
+  }
+}
+
 </script>
 
 <template>
@@ -126,17 +137,52 @@ function deleteMember(memberId) {
       <div class="bg-white rounded-lg shadow-lg w-96 p-6 relative">
         <h3 class="text-xl font-semibold mb-4">Create New Member</h3>
         <form @submit.prevent="createMember" class="space-y-4">
-          <input v-model="newMember.name" placeholder="Name" class="w-full border px-3 py-2 rounded" />
-          <input v-model="newMember.age" placeholder="Age" type="number" class="w-full border px-3 py-2 rounded" />
-          <input v-model="newMember.email" placeholder="Email" class="w-full border px-3 py-2 rounded" />
-          <input v-model="newMember.address" placeholder="Address" class="w-full border px-3 py-2 rounded" />
+          <input
+            v-model="newMember.name"
+            placeholder="Name"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="newMember.age"
+            placeholder="Age"
+            type="number"
+            class="w-full border px-3 py-2 rounded"
+          />
+          <input
+            v-model="newMember.email"
+            placeholder="Email"
+            type="email"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="newMember.address"
+            placeholder="Address"
+            class="w-full border px-3 py-2 rounded"
+          />
           <div class="flex justify-end gap-2">
-            <button type="button" @click="showCreateModal = false" class="px-4 py-2 rounded border">Cancel</button>
-            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Save</button>
+            <button
+              type="button"
+              @click="showCreateModal = false"
+              class="px-4 py-2 rounded border"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            >
+              Save
+            </button>
           </div>
         </form>
-        <button @click="showCreateModal = false" class="absolute top-3 right-3 text-gray-500 text-xl">
-          &times;
+        <button
+          @click="showCreateModal = false"
+          class="absolute top-3 right-3 text-gray-500 text-xl"
+          aria-label="Close"
+        >
+          ×
         </button>
       </div>
     </div>
@@ -149,19 +195,55 @@ function deleteMember(memberId) {
       <div class="bg-white rounded-lg shadow-lg w-96 p-6 relative">
         <h3 class="text-xl font-semibold mb-4">Edit Member</h3>
         <form @submit.prevent="saveEdit" class="space-y-4">
-          <input v-model="editingMember.name" placeholder="Name" class="w-full border px-3 py-2 rounded" />
-          <input v-model="editingMember.age" placeholder="Age" type="number" class="w-full border px-3 py-2 rounded" />
-          <input v-model="editingMember.email" placeholder="Email" class="w-full border px-3 py-2 rounded" />
-          <input v-model="editingMember.address" placeholder="Address" class="w-full border px-3 py-2 rounded" />
+          <input
+            v-model="editingMember.name"
+            placeholder="Name"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="editingMember.age"
+            placeholder="Age"
+            type="number"
+            class="w-full border px-3 py-2 rounded"
+          />
+          <input
+            v-model="editingMember.email"
+            placeholder="Email"
+            type="email"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="editingMember.address"
+            placeholder="Address"
+            class="w-full border px-3 py-2 rounded"
+          />
           <div class="flex justify-end gap-2">
-            <button type="button" @click="showEditModal = false" class="px-4 py-2 rounded border">Cancel</button>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Save Changes</button>
+            <button
+              type="button"
+              @click="showEditModal = false"
+              class="px-4 py-2 rounded border"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Save Changes
+            </button>
           </div>
         </form>
-        <button @click="showEditModal = false" class="absolute top-3 right-3 text-gray-500 text-xl">
-          &times;
+        <button
+          @click="showEditModal = false"
+          class="absolute top-3 right-3 text-gray-500 text-xl"
+          aria-label="Close"
+        >
+          ×
         </button>
       </div>
     </div>
   </div>
 </template>
+```

@@ -1,65 +1,84 @@
+```vue
 <script setup>
-import { ref, onMounted } from 'vue'
-import api from '@/plugins/axios'
+import { ref, onMounted, watch } from 'vue';
+import api from '@/plugins/axios';
 
-const categories = ref([])
-const showCreateModal = ref(false)
-const showEditModal = ref(false)
+const categories = ref([]);
+const showCreateModal = ref(false);
+const showEditModal = ref(false);
 
 const newCategory = ref({
-  category_name: ''
-})
+  category_name: '',
+});
 
-const editingCategory = ref(null)
+const editingCategory = ref(null);
 
-onMounted(async () => {
-  await fetchCategories()
-})
+// Load categories from localStorage or API on mount
+onMounted(fetchCategories);
 
 async function fetchCategories() {
   try {
-    const response = await api.get('/category')
-    categories.value = Array.isArray(response.data) ? response.data : response.data.data
+    const response = await api.get('/category');
+    categories.value = Array.isArray(response.data) ? response.data : response.data.data;
   } catch (error) {
-    console.error('Failed to fetch category:', error)
+    console.error('Failed to fetch categories:', error);
   }
 }
 
 function openCreateModal() {
-  newCategory.value = { category_name: '' }
-  showCreateModal.value = true
+  newCategory.value = { category_name: '' };
+  showCreateModal.value = true;
 }
 
-function createCategory() {
+async function createCategory() {
   if (!newCategory.value.category_name) {
-    alert('Please enter category name')
-    return
+    alert('Please enter category name');
+    return;
   }
 
-  categories.value.push({
-    id: Date.now(),
-    ...newCategory.value
-  })
-
-  showCreateModal.value = false
+  try {
+    const response = await api.post('/category', newCategory.value);
+    categories.value.push(response.data);
+    showCreateModal.value = false;
+  } catch (error) {
+    console.error('Failed to create category:', error);
+    alert('Failed to create category.');
+  }
 }
 
 function editCategory(category) {
-  editingCategory.value = { ...category }
-  showEditModal.value = true
+  editingCategory.value = { ...category };
+  showEditModal.value = true;
 }
 
-function saveEdit() {
-  const index = categories.value.findIndex(c => c.id === editingCategory.value.id)
-  if (index !== -1) {
-    categories.value[index] = { ...editingCategory.value }
+async function saveEdit() {
+  if (!editingCategory.value.category_name) {
+    alert('Please enter category name');
+    return;
   }
-  showEditModal.value = false
+
+  try {
+    const response = await api.put(`/category/${editingCategory.value.id}`, editingCategory.value);
+    const index = categories.value.findIndex(c => c.id === editingCategory.value.id);
+    if (index !== -1) {
+      categories.value[index] = response.data;
+    }
+    showEditModal.value = false;
+  } catch (error) {
+    console.error('Failed to update category:', error);
+    alert('Failed to update category.');
+  }
 }
 
-function deleteCategory(id) {
-  if (confirm('Are you sure you want to delete this category?')) {
-    categories.value = categories.value.filter(c => c.id !== id)
+async function deleteCategory(id) {
+  if (!confirm('Are you sure you want to delete this category?')) return;
+
+  try {
+    await api.delete(`/category/${id}`);
+    categories.value = categories.value.filter(c => c.id !== id);
+  } catch (error) {
+    console.error('Failed to delete category:', error);
+    alert('Failed to delete category.');
   }
 }
 </script>
@@ -91,8 +110,18 @@ function deleteCategory(id) {
         >
           <td class="px-6 py-4 text-gray-800">{{ category.category_name }}</td>
           <td class="px-6 py-4 text-center space-x-2">
-            <button @click="editCategory(category)" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Edit</button>
-            <button @click="deleteCategory(category.id)" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Delete</button>
+            <button
+              @click="editCategory(category)"
+              class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+            >
+              Edit
+            </button>
+            <button
+              @click="deleteCategory(category.id)"
+              class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+            >
+              Delete
+            </button>
           </td>
         </tr>
         <tr v-if="categories.length === 0">
@@ -102,7 +131,10 @@ function deleteCategory(id) {
     </table>
 
     <!-- Create Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div
+      v-if="showCreateModal"
+      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+    >
       <div class="bg-white p-6 rounded-lg w-96 shadow">
         <h3 class="text-lg font-semibold mb-4">Create Category</h3>
         <form @submit.prevent="createCategory" class="space-y-4">
@@ -111,17 +143,32 @@ function deleteCategory(id) {
             type="text"
             placeholder="Category Name"
             class="w-full border px-3 py-2 rounded"
+            required
           />
           <div class="flex justify-end space-x-3">
-            <button @click="showCreateModal = false" type="button" class="px-4 py-2 border rounded">Cancel</button>
-            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save</button>
+            <button
+              @click="showCreateModal = false"
+              type="button"
+              class="px-4 py-2 border rounded"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            >
+              Save
+            </button>
           </div>
         </form>
       </div>
     </div>
 
     <!-- Edit Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div
+      v-if="showEditModal"
+      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+    >
       <div class="bg-white p-6 rounded-lg w-96 shadow">
         <h3 class="text-lg font-semibold mb-4">Edit Category</h3>
         <form @submit.prevent="saveEdit" class="space-y-4">
@@ -130,13 +177,26 @@ function deleteCategory(id) {
             type="text"
             placeholder="Category Name"
             class="w-full border px-3 py-2 rounded"
+            required
           />
           <div class="flex justify-end space-x-3">
-            <button @click="showEditModal = false" type="button" class="px-4 py-2 border rounded">Cancel</button>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update</button>
+            <button
+              @click="showEditModal = false"
+              type="button"
+              class="px-4 py-2 border rounded"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Update
+            </button>
           </div>
         </form>
       </div>
     </div>
   </div>
 </template>
+```

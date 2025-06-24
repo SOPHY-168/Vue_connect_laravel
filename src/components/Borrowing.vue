@@ -1,29 +1,29 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import api from '@/plugins/axios'
+import { ref, onMounted, watch } from 'vue';
+import api from '@/plugins/axios';
 
-const borrowings = ref([])
-
-const showCreateModal = ref(false)
-const showEditModal = ref(false)
+const borrowings = ref([]);
+const showCreateModal = ref(false);
+const showEditModal = ref(false);
 
 const newBorrowing = ref({
   book_id: '',
   member_id: '',
   borrowed_at: '',
   returned_at: '',
-})
+});
 
-const editingBorrowing = ref(null)
+const editingBorrowing = ref(null);
 
-onMounted(fetchBorrowings)
+// Load borrowings from localStorage or API on mount
+onMounted(fetchBorrowings);
 
 async function fetchBorrowings() {
   try {
-    const response = await api.get('/borrowing')
-    borrowings.value = Array.isArray(response.data) ? response.data : response.data.data
+    const response = await api.get('/borrowing');
+    borrowings.value = Array.isArray(response.data) ? response.data : response.data.data;
   } catch (error) {
-    console.error('Failed to fetch borrowings:', error)
+    console.error('Failed to fetch borrowings:', error);
   }
 }
 
@@ -33,34 +33,59 @@ function openCreateModal() {
     member_id: '',
     borrowed_at: '',
     returned_at: '',
-  }
-  showCreateModal.value = true
+  };
+  showCreateModal.value = true;
 }
 
-function createBorrowing() {
-  borrowings.value.push({
-    id: Date.now(),
-    ...newBorrowing.value,
-  })
-  showCreateModal.value = false
+async function createBorrowing() {
+  if (!newBorrowing.value.book_id || !newBorrowing.value.member_id || !newBorrowing.value.borrowed_at) {
+    alert('Please fill in all required fields.');
+    return;
+  }
+
+  try {
+    const response = await api.post('/borrowing', newBorrowing.value);
+    borrowings.value.push(response.data);
+    showCreateModal.value = false;
+  } catch (error) {
+    console.error('Error creating borrowing:', error);
+    alert('Failed to create borrowing.');
+  }
 }
 
 function editBorrowing(borrowing) {
-  editingBorrowing.value = { ...borrowing }
-  showEditModal.value = true
+  editingBorrowing.value = { ...borrowing };
+  showEditModal.value = true;
 }
 
-function saveEdit() {
-  const index = borrowings.value.findIndex(b => b.id === editingBorrowing.value.id)
-  if (index !== -1) {
-    borrowings.value[index] = { ...editingBorrowing.value }
+async function saveEdit() {
+  if (!editingBorrowing.value.book_id || !editingBorrowing.value.member_id || !editingBorrowing.value.borrowed_at) {
+    alert('Please fill in all required fields.');
+    return;
   }
-  showEditModal.value = false
+
+  try {
+    const response = await api.put(`/borrowing/${editingBorrowing.value.id}`, editingBorrowing.value);
+    const index = borrowings.value.findIndex(b => b.id === editingBorrowing.value.id);
+    if (index !== -1) {
+      borrowings.value[index] = response.data;
+    }
+    showEditModal.value = false;
+  } catch (error) {
+    console.error('Error updating borrowing:', error);
+    alert('Failed to update borrowing.');
+  }
 }
 
-function deleteBorrowing(id) {
-  if (confirm('Are you sure you want to delete this record?')) {
-    borrowings.value = borrowings.value.filter(b => b.id !== id)
+async function deleteBorrowing(id) {
+  if (!confirm('Are you sure you want to delete this record?')) return;
+
+  try {
+    await api.delete(`/borrowing/${id}`);
+    borrowings.value = borrowings.value.filter(b => b.id !== id);
+  } catch (error) {
+    console.error('Error deleting borrowing:', error);
+    alert('Failed to delete borrowing.');
   }
 }
 </script>
@@ -98,8 +123,18 @@ function deleteBorrowing(id) {
           <td class="px-4 py-2">{{ borrowing.borrowed_at }}</td>
           <td class="px-4 py-2">{{ borrowing.returned_at || 'Not Returned' }}</td>
           <td class="px-4 py-2 text-center space-x-2">
-            <button @click="editBorrowing(borrowing)" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Edit</button>
-            <button @click="deleteBorrowing(borrowing.id)" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Delete</button>
+            <button
+              @click="editBorrowing(borrowing)"
+              class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+            >
+              Edit
+            </button>
+            <button
+              @click="deleteBorrowing(borrowing.id)"
+              class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+            >
+              Delete
+            </button>
           </td>
         </tr>
         <tr v-if="borrowings.length === 0">
@@ -116,13 +151,40 @@ function deleteBorrowing(id) {
       <div class="bg-white p-6 rounded-lg shadow w-96">
         <h3 class="text-lg font-semibold mb-4">New Borrowing</h3>
         <form @submit.prevent="createBorrowing" class="space-y-4">
-          <input v-model="newBorrowing.book_id" placeholder="Book ID" type="number" class="w-full border px-3 py-2 rounded" required />
-          <input v-model="newBorrowing.member_id" placeholder="Member ID" type="number" class="w-full border px-3 py-2 rounded" required />
-          <input v-model="newBorrowing.borrowed_at" placeholder="Borrowed At (YYYY-MM-DD)" type="date" class="w-full border px-3 py-2 rounded" required />
-          <input v-model="newBorrowing.returned_at" placeholder="Returned At (Optional)" type="date" class="w-full border px-3 py-2 rounded" />
+          <input
+            v-model="newBorrowing.book_id"
+            placeholder="Book ID"
+            type="number"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="newBorrowing.member_id"
+            placeholder="Member ID"
+            type="number"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="newBorrowing.borrowed_at"
+            placeholder="Borrowed At (YYYY-MM-DD)"
+            type="date"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="newBorrowing.returned_at"
+            placeholder="Returned At (Optional)"
+            type="date"
+            class="w-full border px-3 py-2 rounded"
+          />
           <div class="flex justify-end space-x-2">
-            <button type="button" @click="showCreateModal = false" class="border px-4 py-2 rounded">Cancel</button>
-            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save</button>
+            <button type="button" @click="showCreateModal = false" class="border px-4 py-2 rounded">
+              Cancel
+            </button>
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+              Save
+            </button>
           </div>
         </form>
       </div>
@@ -136,13 +198,36 @@ function deleteBorrowing(id) {
       <div class="bg-white p-6 rounded-lg shadow w-96">
         <h3 class="text-lg font-semibold mb-4">Edit Borrowing</h3>
         <form @submit.prevent="saveEdit" class="space-y-4">
-          <input v-model="editingBorrowing.book_id" type="number" class="w-full border px-3 py-2 rounded" required />
-          <input v-model="editingBorrowing.member_id" type="number" class="w-full border px-3 py-2 rounded" required />
-          <input v-model="editingBorrowing.borrowed_at" type="date" class="w-full border px-3 py-2 rounded" required />
-          <input v-model="editingBorrowing.returned_at" type="date" class="w-full border px-3 py-2 rounded" />
+          <input
+            v-model="editingBorrowing.book_id"
+            type="number"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="editingBorrowing.member_id"
+            type="number"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="editingBorrowing.borrowed_at"
+            type="date"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="editingBorrowing.returned_at"
+            type="date"
+            class="w-full border px-3 py-2 rounded"
+          />
           <div class="flex justify-end space-x-2">
-            <button type="button" @click="showEditModal = false" class="border px-4 py-2 rounded">Cancel</button>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update</button>
+            <button type="button" @click="showEditModal = false" class="border px-4 py-2 rounded">
+              Cancel
+            </button>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+              Update
+            </button>
           </div>
         </form>
       </div>

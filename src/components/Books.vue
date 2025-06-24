@@ -1,67 +1,86 @@
+```vue
 <script setup>
-import { ref, onMounted } from 'vue'
-import api from '@/plugins/axios'
+import { ref, onMounted, watch } from 'vue';
+import api from '@/plugins/axios';
 
-const books = ref([])
-const showCreateModal = ref(false)
-const showEditModal = ref(false)
+const books = ref([]);
+const showCreateModal = ref(false);
+const showEditModal = ref(false);
 
 const newBook = ref({
   title: '',
   category_id: '',
-  author_id: ''
-})
+  author_id: '',
+});
 
-const editingBook = ref(null)
+const editingBook = ref(null);
 
-onMounted(async () => {
-  await fetchBooks()
-})
+// Load books from localStorage or API on mount
+onMounted(fetchBooks);
 
 async function fetchBooks() {
   try {
-    const response = await api.get('/books')
-    books.value = Array.isArray(response.data) ? response.data : response.data.data
+    const response = await api.get('/books');
+    books.value = Array.isArray(response.data) ? response.data : response.data.data;
   } catch (error) {
-    console.error('Failed to fetch books:', error)
+    console.error('Failed to fetch books:', error);
   }
 }
 
 function openCreateModal() {
-  newBook.value = { title: '', category_id: '', author_id: '' }
-  showCreateModal.value = true
+  newBook.value = { title: '', category_id: '', author_id: '' };
+  showCreateModal.value = true;
 }
 
-function createBook() {
-  if (!newBook.value.title) {
-    alert('Please enter the book title')
-    return
+async function createBook() {
+  if (!newBook.value.title || !newBook.value.category_id || !newBook.value.author_id) {
+    alert('All fields are required.');
+    return;
   }
 
-  books.value.push({
-    id: Date.now(),
-    ...newBook.value
-  })
-
-  showCreateModal.value = false
+  try {
+    const response = await api.post('/books', newBook.value);
+    books.value.push(response.data);
+    showCreateModal.value = false;
+  } catch (error) {
+    console.error('Failed to create book:', error);
+    alert('Failed to create book.');
+  }
 }
 
 function editBook(book) {
-  editingBook.value = { ...book }
-  showEditModal.value = true
+  editingBook.value = { ...book };
+  showEditModal.value = true;
 }
 
-function saveEdit() {
-  const index = books.value.findIndex(b => b.id === editingBook.value.id)
-  if (index !== -1) {
-    books.value[index] = { ...editingBook.value }
+async function saveEdit() {
+  if (!editingBook.value.title || !editingBook.value.category_id || !editingBook.value.author_id) {
+    alert('All fields are required.');
+    return;
   }
-  showEditModal.value = false
+
+  try {
+    const response = await api.put(`/books/${editingBook.value.id}`, editingBook.value);
+    const index = books.value.findIndex((b) => b.id === editingBook.value.id);
+    if (index !== -1) {
+      books.value[index] = response.data;
+    }
+    showEditModal.value = false;
+  } catch (error) {
+    console.error('Failed to update book:', error);
+    alert('Failed to update book.');
+  }
 }
 
-function deleteBook(id) {
-  if (confirm('Are you sure you want to delete this book?')) {
-    books.value = books.value.filter(b => b.id !== id)
+async function deleteBook(id) {
+  if (!confirm('Are you sure you want to delete this book?')) return;
+
+  try {
+    await api.delete(`/books/${id}`);
+    books.value = books.value.filter((b) => b.id !== id);
+  } catch (error) {
+    console.error('Failed to delete book:', error);
+    alert('Failed to delete book.');
   }
 }
 </script>
@@ -93,8 +112,18 @@ function deleteBook(id) {
           <td class="px-6 py-4 text-gray-800">{{ book.category_id }}</td>
           <td class="px-6 py-4 text-gray-800">{{ book.author_id }}</td>
           <td class="px-6 py-4 text-center space-x-2">
-            <button @click="editBook(book)" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Edit</button>
-            <button @click="deleteBook(book.id)" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Delete</button>
+            <button
+              @click="editBook(book)"
+              class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+            >
+              Edit
+            </button>
+            <button
+              @click="deleteBook(book.id)"
+              class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+            >
+              Delete
+            </button>
           </td>
         </tr>
 
@@ -105,35 +134,100 @@ function deleteBook(id) {
     </table>
 
     <!-- Create Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+    <div
+      v-if="showCreateModal"
+      class="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50"
+    >
       <div class="bg-white rounded-lg shadow-lg w-96 p-6 relative">
         <h3 class="text-xl font-semibold mb-4">Create Book</h3>
         <form @submit.prevent="createBook" class="space-y-4">
-          <input v-model="newBook.title" type="text" placeholder="Title" class="w-full border px-3 py-2 rounded" />
-          <input v-model="newBook.category_id" type="text" placeholder="Category ID" class="w-full border px-3 py-2 rounded" />
-          <input v-model="newBook.author_id" type="text" placeholder="Author ID" class="w-full border px-3 py-2 rounded" />
+          <input
+            v-model="newBook.title"
+            type="text"
+            placeholder="Title"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="newBook.category_id"
+            type="number"
+            placeholder="Category ID"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="newBook.author_id"
+            type="number"
+            placeholder="Author ID"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
           <div class="flex justify-end gap-2">
-            <button type="button" @click="showCreateModal = false" class="px-4 py-2 border rounded">Cancel</button>
-            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save</button>
+            <button
+              type="button"
+              @click="showCreateModal = false"
+              class="px-4 py-2 border rounded"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            >
+              Save
+            </button>
           </div>
         </form>
       </div>
     </div>
 
     <!-- Edit Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+    <div
+      v-if="showEditModal"
+      class="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50"
+    >
       <div class="bg-white rounded-lg shadow-lg w-96 p-6 relative">
         <h3 class="text-xl font-semibold mb-4">Edit Book</h3>
         <form @submit.prevent="saveEdit" class="space-y-4">
-          <input v-model="editingBook.title" type="text" placeholder="Title" class="w-full border px-3 py-2 rounded" />
-          <input v-model="editingBook.category_id" type="text" placeholder="Category ID" class="w-full border px-3 py-2 rounded" />
-          <input v-model="editingBook.author_id" type="text" placeholder="Author ID" class="w-full border px-3 py-2 rounded" />
+          <input
+            v-model="editingBook.title"
+            type="text"
+            placeholder="Title"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="editingBook.category_id"
+            type="number"
+            placeholder="Category ID"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
+          <input
+            v-model="editingBook.author_id"
+            type="number"
+            placeholder="Author ID"
+            class="w-full border px-3 py-2 rounded"
+            required
+          />
           <div class="flex justify-end gap-2">
-            <button type="button" @click="showEditModal = false" class="px-4 py-2 border rounded">Cancel</button>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update</button>
+            <button
+              type="button"
+              @click="showEditModal = false"
+              class="px-4 py-2 border rounded"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Update
+            </button>
           </div>
         </form>
       </div>
     </div>
   </div>
 </template>
+```

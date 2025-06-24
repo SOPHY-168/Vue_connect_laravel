@@ -1,9 +1,10 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
+import { onMounted } from 'vue';
+import { index } from '@/api/author';
 
 const authors = ref([]);
 const error = ref(null);
-// States for create and edit modals
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 
@@ -15,58 +16,70 @@ const newAuthor = ref({
 
 const editingAuthor = ref(null);
 
-import { onMounted } from 'vue';
-import { index } from '@/api/author';
+// Load authors from localStorage or API on mount
+onMounted(fetchAuthors);
 
-onMounted(async () => {
+async function fetchAuthors() {
   try {
     const response = await index();
     authors.value = Array.isArray(response.data) ? response.data : response.data.data;
-    console.log(authors.value);
   } catch (err) {
-    error.value = "Failed to fetch posts";
+    error.value = 'Failed to fetch authors';
     console.error(err);
   }
-});
+}
 
 function openCreateModal() {
   newAuthor.value = { FirstName: '', LastName: '', Nationality: '' };
   showCreateModal.value = true;
 }
-// function create new author
-function createAuthor() {
+
+async function createAuthor() {
   if (!newAuthor.value.FirstName || !newAuthor.value.LastName) {
     alert('Please fill in all required fields.');
     return;
   }
-  authors.value.push({
-    id: Date.now(),
-    ...newAuthor.value,
-  });
-  showCreateModal.value = false;
+  try {
+    const response = await store(newAuthor.value);
+    authors.value.push(response.data);
+    showCreateModal.value = false;
+  } catch (err) {
+    alert('Failed to create author.');
+    console.error(err);
+  }
 }
 
 function editAuthor(author) {
-  editingAuthor.value = { ...author }; // clone to avoid direct mutation
+  editingAuthor.value = { ...author };
   showEditModal.value = true;
 }
 
-function saveEdit() {
+async function saveEdit() {
   if (!editingAuthor.value.FirstName || !editingAuthor.value.LastName) {
     alert('Please fill in all required fields.');
     return;
   }
-  // Find index of the author being edited
-  const index = authors.value.findIndex(a => a.id === editingAuthor.value.id);
-  if (index !== -1) {
-    authors.value[index] = { ...editingAuthor.value };
+  try {
+    const response = await update(editingAuthor.value);
+    const index = authors.value.findIndex((a) => a.id === editingAuthor.value.id);
+    if (index !== -1) {
+      authors.value[index] = response.data;
+    }
+    showEditModal.value = false;
+  } catch (err) {
+    alert('Failed to update author.');
+    console.error(err);
   }
-  showEditModal.value = false;
 }
 
-function deleteAuthor(authorId) {
-  if (confirm('Are you sure you want to delete this author?')) {
-    authors.value = authors.value.filter(a => a.id !== authorId);
+async function deleteAuthor(authorId) {
+  if (!confirm('Are you sure you want to delete this author?')) return;
+  try {
+    await destroy(authorId);
+    authors.value = authors.value.filter((a) => a.id !== authorId);
+  } catch (err) {
+    alert('Failed to delete author.');
+    console.error(err);
   }
 }
 </script>
@@ -186,7 +199,7 @@ function deleteAuthor(authorId) {
           class="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
           aria-label="Close"
         >
-          &times;
+          ×
         </button>
       </div>
     </div>
@@ -254,7 +267,7 @@ function deleteAuthor(authorId) {
           class="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
           aria-label="Close"
         >
-          &times;
+          ×
         </button>
       </div>
     </div>
