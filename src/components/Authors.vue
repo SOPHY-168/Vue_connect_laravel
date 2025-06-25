@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { onMounted } from 'vue';
-import { index } from '@/api/author';
+import { index , store, update, destroy  } from '@/api/author';
 
 const authors = ref([]);
 const error = ref(null);
