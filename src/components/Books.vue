@@ -1,9 +1,10 @@
-```vue
+
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { index } from '@/api/book';
+// import api from '@/plugins/axios';
+import { index , store, update, destroy  } from '@/api/book';
+
 const books = ref([]);
-const error = ref(null);
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 
@@ -22,9 +23,8 @@ async function fetchBooks() {
   try {
     const response = await index();
     books.value = Array.isArray(response.data) ? response.data : response.data.data;
-  } catch (err) {
-    error.value = 'Failed to fetch Books'
-    console.error('Failed to fetch books:', err);
+  } catch (error) {
+    console.error('Failed to fetch books:', error);
   }
 }
 
@@ -40,7 +40,7 @@ async function createBook() {
   }
 
   try {
-    const response = await api.post('/books', newBook.value);
+    const response = await store(newBook.value);
     books.value.push(response.data);
     showCreateModal.value = false;
   } catch (error) {
@@ -61,7 +61,7 @@ async function saveEdit() {
   }
 
   try {
-    const response = await api.put(`/books/${editingBook.value.id}`, editingBook.value);
+    const response = await update(editingBook.value);
     const index = books.value.findIndex((b) => b.id === editingBook.value.id);
     if (index !== -1) {
       books.value[index] = response.data;
@@ -77,7 +77,7 @@ async function deleteBook(id) {
   if (!confirm('Are you sure you want to delete this book?')) return;
 
   try {
-    await api.delete(`/books/${id}`);
+    await destroy(id);
     books.value = books.value.filter((b) => b.id !== id);
   } catch (error) {
     console.error('Failed to delete book:', error);
