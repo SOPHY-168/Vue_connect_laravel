@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { index } from '@/api/borrowing';
+import { index, store, update, destroy } from '@/api/borrowing';
 const borrowings = ref([]);
 const error = ref(null);
 const showCreateModal = ref(false);
@@ -45,7 +45,7 @@ async function createBorrowing() {
   }
 
   try {
-    const response = await api.post('/borrowing', newBorrowing.value);
+    const response = await store(newBorrowing.value);
     borrowings.value.push(response.data);
     showCreateModal.value = false;
   } catch (error) {
@@ -66,7 +66,7 @@ async function saveEdit() {
   }
 
   try {
-    const response = await api.put(`/borrowing/${editingBorrowing.value.id}`, editingBorrowing.value);
+    const response = await update(editingBorrowing.value);
     const index = borrowings.value.findIndex(b => b.id === editingBorrowing.value.id);
     if (index !== -1) {
       borrowings.value[index] = response.data;
@@ -82,7 +82,7 @@ async function deleteBorrowing(id) {
   if (!confirm('Are you sure you want to delete this record?')) return;
 
   try {
-    await api.delete(`/borrowing/${id}`);
+    await destroy(id);
     borrowings.value = borrowings.value.filter(b => b.id !== id);
   } catch (error) {
     console.error('Error deleting borrowing:', error);
