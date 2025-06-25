@@ -1,8 +1,8 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import api from '@/plugins/axios';
-
+import { index } from '@/api/borrowing';
 const borrowings = ref([]);
+const error = ref(null);
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 
@@ -20,10 +20,11 @@ onMounted(fetchBorrowings);
 
 async function fetchBorrowings() {
   try {
-    const response = await api.get('/borrowing');
+    const response = await index();
     borrowings.value = Array.isArray(response.data) ? response.data : response.data.data;
-  } catch (error) {
-    console.error('Failed to fetch borrowings:', error);
+  } catch (err) {
+    error.value = 'Failed to fetch authors'
+    console.error('Failed to fetch borrowings:', err);
   }
 }
 

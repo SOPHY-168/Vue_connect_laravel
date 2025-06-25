@@ -1,9 +1,9 @@
 ```vue
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import api from '@/plugins/axios';
-
+import { index } from '@/api/member';
 const members = ref([]);
+const error = ref(null);
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 
@@ -17,14 +17,17 @@ const newMember = ref({
 const editingMember = ref(null);
 
 // Load members from localStorage or API on mount
-onMounted(async () => {
+onMounted(fetchMembers);
+
+async function fetchMembers() {
   try {
-    const response = await api.get('/members');
+    const response = await index();
     members.value = Array.isArray(response.data) ? response.data : response.data.data;
-  } catch (error) {
-    console.error('Failed to fetch members:', error);
+  } catch (err) {
+    error.value = 'Failed to fetch authors';
+    console.error(err);
   }
-});
+}
 
 async function createMember() {
   if (!newMember.value.name || !newMember.value.email) {

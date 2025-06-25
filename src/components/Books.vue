@@ -1,9 +1,9 @@
 ```vue
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import api from '@/plugins/axios';
-
+import { index } from '@/api/book';
 const books = ref([]);
+const error = ref(null);
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 
@@ -20,10 +20,11 @@ onMounted(fetchBooks);
 
 async function fetchBooks() {
   try {
-    const response = await api.get('/books');
+    const response = await index();
     books.value = Array.isArray(response.data) ? response.data : response.data.data;
-  } catch (error) {
-    console.error('Failed to fetch books:', error);
+  } catch (err) {
+    error.value = 'Failed to fetch Books'
+    console.error('Failed to fetch books:', err);
   }
 }
 
