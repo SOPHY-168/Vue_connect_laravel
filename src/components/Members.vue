@@ -1,7 +1,7 @@
 ```vue
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { index } from '@/api/member';
+import { index, store, update, destroy } from '@/api/member';
 const members = ref([]);
 const error = ref(null);
 const showCreateModal = ref(false);
@@ -36,7 +36,7 @@ async function createMember() {
   }
 
   try {
-    const response = await api.post('/members', newMember.value);
+    const response = await store(newMember.value);
     members.value.push(response.data);
     showCreateModal.value = false;
   } catch (error) {
@@ -52,7 +52,7 @@ async function saveEdit() {
   }
 
   try {
-    const response = await api.put(`/members/${editingMember.value.id}`, editingMember.value);
+    const response = await update(editingMember.value);
     const index = members.value.findIndex((m) => m.id === editingMember.value.id);
     if (index !== -1) {
       members.value[index] = response.data;
@@ -68,7 +68,7 @@ async function deleteMember(memberId) {
   if (!confirm('Are you sure you want to delete this member?')) return;
 
   try {
-    await api.delete(`/members/${memberId}`);
+    await destroy(memberId);
     members.value = members.value.filter((m) => m.id !== memberId);
   } catch (error) {
     console.error('Failed to delete member:', error);

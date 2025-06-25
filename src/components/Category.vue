@@ -1,7 +1,7 @@
 ```vue
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { index } from '@/api/category';
+import { index, store, update, destroy } from '@/api/category';
 const categories = ref([]);
 const error = ref(null);
 const showCreateModal = ref(false);
@@ -38,7 +38,7 @@ async function createCategory() {
   }
 
   try {
-    const response = await api.post('/category', newCategory.value);
+    const response = await store(newCategory.value);
     categories.value.push(response.data);
     showCreateModal.value = false;
   } catch (error) {
@@ -59,7 +59,7 @@ async function saveEdit() {
   }
 
   try {
-    const response = await api.put(`/category/${editingCategory.value.id}`, editingCategory.value);
+    const response = await update(editingCategory.value);
     const index = categories.value.findIndex(c => c.id === editingCategory.value.id);
     if (index !== -1) {
       categories.value[index] = response.data;
@@ -75,7 +75,7 @@ async function deleteCategory(id) {
   if (!confirm('Are you sure you want to delete this category?')) return;
 
   try {
-    await api.delete(`/category/${id}`);
+    await destroy(id);
     categories.value = categories.value.filter(c => c.id !== id);
   } catch (error) {
     console.error('Failed to delete category:', error);
